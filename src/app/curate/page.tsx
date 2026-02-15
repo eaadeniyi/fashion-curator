@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePreferencesStore } from "@/stores/preferences";
 import { OutfitCombination } from "@/types/fashion";
 import { ColorPalette } from "@/types/color";
@@ -15,7 +15,22 @@ export default function CuratePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [itemsConsidered, setItemsConsidered] = useState(0);
-  const preferences = usePreferencesStore((s) => s.getPreferences());
+
+  // Select individual fields to avoid creating new objects on every render
+  const style = usePreferencesStore((s) => s.style);
+  const vibe = usePreferencesStore((s) => s.vibe);
+  const bodyType = usePreferencesStore((s) => s.bodyType);
+  const budgetRange = usePreferencesStore((s) => s.budgetRange);
+  const baseColor = usePreferencesStore((s) => s.baseColor);
+  const harmonyMode = usePreferencesStore((s) => s.harmonyMode);
+  const preferMinimal = usePreferencesStore((s) => s.preferMinimal);
+  const genderExpression = usePreferencesStore((s) => s.genderExpression);
+
+  const preferences = useMemo(() => {
+    if (!style || !vibe || !bodyType || !genderExpression) return null;
+    return { style, vibe, bodyType, budgetRange, baseColor, harmonyMode, preferMinimal, genderExpression };
+  }, [style, vibe, bodyType, budgetRange, baseColor, harmonyMode, preferMinimal, genderExpression]);
+
   const router = useRouter();
 
   const fetchRecommendations = async () => {
