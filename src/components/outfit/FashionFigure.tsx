@@ -1,5 +1,6 @@
 "use client";
 
+import { CSSProperties } from "react";
 import { FashionItem, Category, GenderExpression, OutfitCombination } from "@/types/fashion";
 
 const ZONE_CATEGORY_MAP: Record<string, Category[]> = {
@@ -18,14 +19,14 @@ const ZONE_CATEGORY_MAP: Record<string, Category[]> = {
 const ZONE_LABELS: Record<string, string> = {
   "zone-head":  "Hat",
   "zone-eyes":  "Sunglasses",
-  "zone-ears":  "Earrings / Jewelry",
+  "zone-ears":  "Earrings",
   "zone-neck":  "Scarf / Necklace",
   "zone-torso": "Top / Outerwear",
   "zone-waist": "Belt",
-  "zone-wrist": "Watch / Bracelet",
+  "zone-wrist": "Watch",
   "zone-hand":  "Bag",
   "zone-legs":  "Bottoms",
-  "zone-feet":  "Shoes / Socks",
+  "zone-feet":  "Shoes",
 };
 
 function getItem(zone: string, items: FashionItem[]): FashionItem | null {
@@ -41,8 +42,51 @@ function shade(hex: string, amt: number): string {
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
-function gid(itemId: string) {
-  return "cg_" + itemId.replace(/[^a-z0-9]/gi, "");
+function clothStyle(color: string, extra?: CSSProperties): CSSProperties {
+  return {
+    backgroundColor: color,
+    backgroundImage: `linear-gradient(105deg, ${shade(color, -55)} 0%, ${shade(color, 50)} 38%, ${shade(color, -15)} 65%, ${shade(color, -55)} 100%)`,
+    boxShadow: `inset -4px 0 8px ${shade(color, -70)}44, inset 4px 0 6px ${shade(color, 60)}33, 0 2px 6px #00000030`,
+    ...extra,
+  };
+}
+
+function skinStyle(extra?: CSSProperties): CSSProperties {
+  return {
+    backgroundColor: "#C68642",
+    backgroundImage: "radial-gradient(ellipse at 38% 30%, #E8A86A 0%, #C68642 55%, #8B5E3C 100%)",
+    boxShadow: "inset -3px 0 8px #8B5E3C44, 0 2px 6px #00000025",
+    ...extra,
+  };
+}
+
+interface ZoneButtonProps {
+  label: string;
+  item: FashionItem | null;
+  active: boolean;
+  onClick: () => void;
+  style: CSSProperties;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+function ZoneButton({ label, item, active, onClick, style, children, className = "" }: ZoneButtonProps) {
+  return (
+    <div
+      role="button"
+      aria-label={`${label}${item ? `: ${item.name}` : " (empty — click to add)"}`}
+      onClick={onClick}
+      title={item ? `${label}: ${item.name} — click to swap` : `${label} — click to add`}
+      className={`cursor-pointer transition-all duration-200 ${active ? "brightness-110 scale-105" : "hover:brightness-105 hover:scale-102"} ${className}`}
+      style={{
+        ...style,
+        outline: active ? "2.5px solid #7c3aed" : undefined,
+        outlineOffset: active ? "2px" : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 interface Props {
@@ -54,474 +98,367 @@ interface Props {
 
 export function FashionFigure({ outfit, gender, activeZone, onZoneClick }: Props) {
   const fem = gender === GenderExpression.FEMININE;
+  const items = outfit.items;
 
-  function handleClick(zoneId: string) {
+  function click(zoneId: string) {
     const cats = ZONE_CATEGORY_MAP[zoneId];
     if (cats?.length) onZoneClick(zoneId, cats[0]);
   }
 
-  function zone(zoneId: string) {
-    const item = getItem(zoneId, outfit.items);
-    return {
-      item,
-      active: activeZone === zoneId,
-      label: ZONE_LABELS[zoneId],
-      onClick: () => handleClick(zoneId),
-      fill: item ? `url(#${gid(item.id)})` : undefined,
-      stroke: item ? shade(item.dominantColor, -60) : "#888",
-    };
+  function z(zoneId: string) {
+    const item = getItem(zoneId, items);
+    return { item, active: activeZone === zoneId, label: ZONE_LABELS[zoneId], onClick: () => click(zoneId) };
   }
 
-  const items = outfit.items;
+  // skin colours
+  const skin = "#C68642";
+  const skinDark = "#8B5E3C";
+  const skinHi = "#E8A86A";
+  const hair = fem ? "#2B1608" : "#1A0E05";
+  const hairHi = shade(hair, 55);
 
-  // Skin palette
-  const S = { base: "#C68642", hi: "#E8A86A", lo: "#8B5E3C", lip: "#B5706A", hair: fem ? "#2B1608" : "#1A0E05" };
+  // Zone data
+  const torsoZ = z("zone-torso");
+  const legsZ = z("zone-legs");
+  const feetZ = z("zone-feet");
+  const beltZ = z("zone-waist");
+  const hatZ = z("zone-head");
+  const glassZ = z("zone-eyes");
+  const neckZ = z("zone-neck");
+  const watchZ = z("zone-wrist");
+  const bagZ = z("zone-hand");
+  const earZ = z("zone-ears");
+
+  const torsoColor = torsoZ.item?.dominantColor ?? (fem ? "#D4B8A0" : "#B8A898");
+  const legsColor = legsZ.item?.dominantColor ?? "#6B6B80";
+  const feetColor = feetZ.item?.dominantColor ?? "#2a2a3a";
+  const sleeveColor = torsoColor;
+
+  // Figure width adapts to gender
+  const figW = fem ? 130 : 150;
 
   return (
     <div className="flex flex-col items-center w-full select-none">
       <p className="text-xs text-muted-foreground mb-3">Click a zone to swap items</p>
 
-      <svg viewBox="0 0 280 620" width="190" height="421" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          {/* Skin */}
-          <radialGradient id="rFace" cx="38%" cy="35%" r="62%">
-            <stop offset="0%" stopColor={S.hi}/>
-            <stop offset="55%" stopColor={S.base}/>
-            <stop offset="100%" stopColor={S.lo}/>
-          </radialGradient>
-          <linearGradient id="lNeck" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={S.lo}/>
-            <stop offset="40%" stopColor={S.base}/>
-            <stop offset="65%" stopColor={S.hi}/>
-            <stop offset="100%" stopColor={S.lo}/>
-          </linearGradient>
-          <linearGradient id="lArm" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={S.lo}/>
-            <stop offset="30%" stopColor={S.hi}/>
-            <stop offset="70%" stopColor={S.base}/>
-            <stop offset="100%" stopColor={S.lo}/>
-          </linearGradient>
+      {/* ── Outer container ── */}
+      <div className="relative flex flex-col items-center" style={{ width: figW, fontFamily: "sans-serif" }}>
 
-          {/* Per-item cloth gradients */}
-          {items.map(item => {
-            const c = item.dominantColor;
-            return (
-              <linearGradient key={gid(item.id)} id={gid(item.id)} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor={shade(c, -60)}/>
-                <stop offset="20%"  stopColor={shade(c, -20)}/>
-                <stop offset="48%"  stopColor={shade(c, +65)}/>
-                <stop offset="78%"  stopColor={shade(c, -20)}/>
-                <stop offset="100%" stopColor={shade(c, -60)}/>
-              </linearGradient>
-            );
-          })}
-          {/* Vertical leg gradient */}
-          {items.filter(i => [Category.BOTTOM, Category.DRESS].includes(i.category)).map(item => {
-            const c = item.dominantColor;
-            return (
-              <linearGradient key={gid(item.id)+"v"} id={gid(item.id)+"v"} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor={shade(c, -55)}/>
-                <stop offset="28%"  stopColor={shade(c, +40)}/>
-                <stop offset="58%"  stopColor={shade(c, -10)}/>
-                <stop offset="100%" stopColor={shade(c, -55)}/>
-              </linearGradient>
-            );
-          })}
+        {/* ══════════════ HEAD + HAIR ══════════════ */}
+        <div className="relative flex justify-center" style={{ marginBottom: 0 }}>
 
-          {/* Shadow */}
-          <filter id="ds">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#00000025"/>
-          </filter>
-          {/* Active glow */}
-          <filter id="glow">
-            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#7c3aed60"/>
-          </filter>
-        </defs>
+          {/* Hair */}
+          <div className="absolute" style={{
+            width: fem ? 82 : 76,
+            height: fem ? 64 : 54,
+            top: -6,
+            borderRadius: fem ? "50% 50% 30% 30% / 60% 60% 40% 40%" : "50% 50% 20% 20% / 55% 55% 30% 30%",
+            backgroundColor: hair,
+            backgroundImage: `radial-gradient(ellipse at 35% 28%, ${hairHi} 0%, ${hair} 55%)`,
+            boxShadow: `0 2px 8px #00000040`,
+            zIndex: 0,
+          }}/>
 
-        {/* ─────────── HAIR ─────────── */}
-        {fem ? (
-          <g>
-            {/* Main hair mass behind face */}
-            <ellipse cx="140" cy="75" rx="52" ry="58" fill={S.hair}/>
-            {/* Side strands */}
-            <path d="M88 90 Q70 130 72 185 Q78 198 84 188 Q84 155 92 115Z" fill={S.hair}/>
-            <path d="M192 90 Q210 130 208 185 Q202 198 196 188 Q196 155 188 115Z" fill={S.hair}/>
-            {/* Hair sheen */}
-            <path d="M115 34 Q140 26 165 34" stroke={shade(S.hair,55)} strokeWidth="3" fill="none" opacity="0.45" strokeLinecap="round"/>
-          </g>
+          {/* Face */}
+          <div style={{
+            ...skinStyle(),
+            width: fem ? 74 : 72,
+            height: fem ? 88 : 84,
+            borderRadius: fem ? "50% 50% 46% 46% / 54% 54% 46% 46%" : "48% 48% 44% 44% / 52% 52% 44% 44%",
+            position: "relative",
+            zIndex: 1,
+            marginTop: 10,
+          }}>
+            {/* Ears */}
+            <div style={{ ...skinStyle(), position:"absolute", width:12, height:18, borderRadius:"50%", top:24, left:-6, zIndex:0 }}/>
+            <div style={{ ...skinStyle(), position:"absolute", width:12, height:18, borderRadius:"50%", top:24, right:-6, zIndex:0 }}/>
+
+            {/* Eyebrows */}
+            <div style={{ position:"absolute", top:22, left:10, width:20, height:4, borderRadius:4, backgroundColor:hair, transform: fem ? "rotate(-4deg)" : "rotate(-2deg)" }}/>
+            <div style={{ position:"absolute", top:22, right:10, width:20, height:4, borderRadius:4, backgroundColor:hair, transform: fem ? "rotate(4deg)" : "rotate(2deg)" }}/>
+
+            {/* Eyes */}
+            {glassZ.item ? (
+              /* Sunglasses */
+              <div onClick={glassZ.onClick} style={{ position:"absolute", top:30, left:6, right:6, display:"flex", gap:4, cursor:"pointer",
+                outline: glassZ.active ? "2px solid #7c3aed" : undefined, borderRadius:4, padding:1 }}>
+                {[0,1].map(i => (
+                  <div key={i} style={{
+                    flex:1, height:16, borderRadius:8,
+                    backgroundColor: glassZ.item!.dominantColor,
+                    backgroundImage: `linear-gradient(135deg, ${shade(glassZ.item!.dominantColor,40)}55 0%, ${glassZ.item!.dominantColor}cc 100%)`,
+                    boxShadow: `0 1px 4px #00000060, inset 0 1px 2px ${shade(glassZ.item!.dominantColor,60)}44`,
+                    border: `1.5px solid ${shade(glassZ.item!.dominantColor,-50)}`,
+                  }}/>
+                ))}
+              </div>
+            ) : (
+              /* Normal eyes */
+              <div style={{ position:"absolute", top:32, left:8, right:8, display:"flex", justifyContent:"space-between" }}>
+                {[0,1].map(i => (
+                  <div key={i} style={{ width:20, height:14, borderRadius:"50%", backgroundColor:"white", boxShadow:"0 1px 3px #00000030", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <div style={{ width:11, height:11, borderRadius:"50%", backgroundColor:"#3D2314", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <div style={{ width:5, height:5, borderRadius:"50%", backgroundColor:"#0d0806" }}>
+                        <div style={{ width:2, height:2, borderRadius:"50%", backgroundColor:"white", margin:"1px 0 0 1px" }}/>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Nose */}
+            <div style={{ position:"absolute", top:50, left:"50%", transform:"translateX(-50%)", width:10, height:10, borderRadius:"50%", backgroundColor:skinDark, opacity:0.28 }}/>
+            {/* Nostrils */}
+            <div style={{ position:"absolute", top:57, left:"50%", transform:"translateX(-50%)", display:"flex", gap:6 }}>
+              <div style={{ width:6, height:5, borderRadius:"50%", backgroundColor:skinDark, opacity:0.35 }}/>
+              <div style={{ width:6, height:5, borderRadius:"50%", backgroundColor:skinDark, opacity:0.35 }}/>
+            </div>
+
+            {/* Lips */}
+            <div style={{ position:"absolute", bottom: fem?10:12, left:"50%", transform:"translateX(-50%)", width: fem?28:26, height: fem?10:8, borderRadius:"0 0 50% 50% / 0 0 100% 100%", backgroundColor: fem?"#C47A7A":"#A06060", boxShadow:"inset 0 2px 3px #00000020" }}/>
+            {fem && <div style={{ position:"absolute", bottom:18, left:"50%", transform:"translateX(-50%)", width:16, height:5, borderRadius:"50% 50% 0 0 / 100% 100% 0 0", backgroundColor:"#C47A7A" }}/>}
+
+            {/* Cheek blush (fem) */}
+            {fem && <>
+              <div style={{ position:"absolute", top:40, left:6, width:14, height:10, borderRadius:"50%", backgroundColor:"#FF9090", opacity:0.2 }}/>
+              <div style={{ position:"absolute", top:40, right:6, width:14, height:10, borderRadius:"50%", backgroundColor:"#FF9090", opacity:0.2 }}/>
+            </>}
+          </div>
+
+          {/* Earrings */}
+          {earZ.item && earZ.item.category === Category.JEWELRY && (
+            <>
+              {[-1,1].map((side, idx) => (
+                <div key={idx} onClick={earZ.onClick} style={{
+                  position:"absolute", cursor:"pointer",
+                  top: fem?42:40,
+                  [side === -1 ? "left" : "right"]: fem ? -4 : -2,
+                  display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                  outline: earZ.active ? "2px solid #7c3aed" : undefined, borderRadius:4, padding:2,
+                }}>
+                  <div style={{ width:10, height:10, borderRadius:"50%", backgroundColor:earZ.item!.dominantColor, boxShadow:`0 1px 4px #00000040, inset 0 -1px 2px ${shade(earZ.item!.dominantColor,-40)}` }}/>
+                  {fem && <>
+                    <div style={{ width:2, height:12, backgroundColor:earZ.item!.dominantColor }}/>
+                    <div style={{ width:8, height:8, borderRadius:"50%", backgroundColor:earZ.item!.dominantColor, boxShadow:`0 1px 4px #00000040` }}/>
+                  </>}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* ══════════════ NECK ══════════════ */}
+        <div style={{ ...skinStyle(), width: fem?20:24, height:20, borderRadius:"0 0 6px 6px", zIndex:2, position:"relative" }}>
+          {/* Necklace */}
+          {neckZ.item && neckZ.item.category === Category.JEWELRY && (
+            <div onClick={neckZ.onClick} style={{
+              position:"absolute", bottom:-6, left:"50%", transform:"translateX(-50%)",
+              width:40, height:8, borderRadius:"0 0 50% 50%",
+              border: `3px solid ${neckZ.item.dominantColor}`,
+              borderTop:"none", cursor:"pointer",
+              outline: neckZ.active ? "2px solid #7c3aed" : undefined,
+            }}/>
+          )}
+        </div>
+
+        {/* ══════════════ TORSO + ARMS ══════════════ */}
+        <div className="relative flex items-start justify-center" style={{ width: "100%", height: fem ? 148 : 162, marginTop:-2 }}>
+
+          {/* LEFT ARM */}
+          <div className="absolute flex flex-col items-center" style={{ left: fem?-6:2, top: fem?6:8 }}>
+            {/* Upper arm */}
+            <ZoneButton {...torsoZ} onClick={() => click("zone-torso")}
+              style={{ ...clothStyle(sleeveColor), width: fem?20:24, height: fem?72:80, borderRadius:12, marginBottom:-1 }}/>
+            {/* Elbow joint */}
+            <div style={{ ...skinStyle(), width: fem?16:20, height:16, borderRadius:"50%", zIndex:2, margin:"0 auto" }}/>
+            {/* Forearm */}
+            <div style={{ ...skinStyle(), width: fem?14:18, height: fem?56:60, borderRadius:10, marginTop:-2 }}/>
+            {/* Hand */}
+            <div style={{ ...skinStyle(), width: fem?16:20, height: fem?22:24, borderRadius:8, marginTop:-2 }}/>
+          </div>
+
+          {/* TORSO */}
+          <ZoneButton {...torsoZ}
+            style={{
+              ...clothStyle(torsoColor),
+              width: fem ? 80 : 100,
+              height: fem ? 148 : 162,
+              borderRadius: fem
+                ? "38% 38% 30% 30% / 12% 12% 8% 8%"
+                : "28% 28% 20% 20% / 8% 8% 6% 6%",
+              position:"relative",
+              zIndex:1,
+            }}>
+            {/* Collar */}
+            <div style={{
+              position:"absolute", top: 0, left:"50%", transform:"translateX(-50%)",
+              width: fem?24:30, height: fem?14:18,
+              backgroundColor: shade(torsoColor,-30),
+              borderRadius:"0 0 50% 50%",
+              backgroundImage:`linear-gradient(180deg, ${shade(torsoColor,-50)} 0%, ${shade(torsoColor,-20)} 100%)`,
+            }}/>
+            {/* Waist nip (fem) */}
+            {fem && <div style={{ position:"absolute", bottom:20, left:0, right:0, height:16, borderRadius:"0 0 50% 50%",
+              backgroundImage:`linear-gradient(180deg, transparent, ${shade(torsoColor,-40)}33)` }}/>}
+            {/* Scarf overlay */}
+            {neckZ.item && neckZ.item.category === Category.SCARF && (
+              <div onClick={neckZ.onClick} style={{
+                position:"absolute", top:-4, left:"50%", transform:"translateX(-50%)",
+                width: fem?48:58, height:32, borderRadius:8,
+                backgroundColor: neckZ.item.dominantColor,
+                backgroundImage:`linear-gradient(120deg,${shade(neckZ.item.dominantColor,-40)},${shade(neckZ.item.dominantColor,40)})`,
+                boxShadow:`0 2px 8px #00000030`,
+                cursor:"pointer",
+                outline: neckZ.active ? "2px solid #7c3aed" : undefined,
+                zIndex:10,
+              }}/>
+            )}
+          </ZoneButton>
+
+          {/* RIGHT ARM */}
+          <div className="absolute flex flex-col items-center" style={{ right: fem?-6:2, top: fem?6:8 }}>
+            <ZoneButton {...torsoZ} onClick={() => click("zone-torso")}
+              style={{ ...clothStyle(sleeveColor), width: fem?20:24, height: fem?72:80, borderRadius:12, marginBottom:-1 }}/>
+            <div style={{ ...skinStyle(), width: fem?16:20, height:16, borderRadius:"50%", zIndex:2 }}/>
+            <div style={{ ...skinStyle(), width: fem?14:18, height: fem?56:60, borderRadius:10, marginTop:-2 }}/>
+            <div style={{ ...skinStyle(), width: fem?16:20, height: fem?22:24, borderRadius:8, marginTop:-2 }}>
+              {/* Watch on right wrist */}
+              {watchZ.item && (
+                <div onClick={watchZ.onClick} style={{
+                  position:"absolute", top:-6, left:"50%", transform:"translateX(-50%)",
+                  width: fem?24:28, height:12, borderRadius:6,
+                  backgroundColor: watchZ.item.dominantColor,
+                  backgroundImage:`linear-gradient(90deg,${shade(watchZ.item.dominantColor,-50)},${shade(watchZ.item.dominantColor,40)},${shade(watchZ.item.dominantColor,-50)})`,
+                  boxShadow:`0 1px 4px #00000050`,
+                  cursor:"pointer",
+                  outline: watchZ.active ? "2px solid #7c3aed" : undefined,
+                  zIndex:5,
+                }}>
+                  <div style={{ position:"absolute", top:2, left:"50%", transform:"translateX(-50%)", width:10, height:8, borderRadius:2, backgroundColor:shade(watchZ.item.dominantColor,55), border:`1px solid ${shade(watchZ.item.dominantColor,-40)}` }}/>
+                </div>
+              )}
+            </div>
+
+            {/* Bag hanging from right hand */}
+            {bagZ.item && (
+              <div onClick={bagZ.onClick} style={{ marginTop:4, cursor:"pointer", outline: bagZ.active ? "2px solid #7c3aed" : undefined, borderRadius:8 }}>
+                {/* Handle */}
+                <div style={{ width:24, height:10, borderRadius:"50% 50% 0 0", border:`2px solid ${shade(bagZ.item.dominantColor,-50)}`, borderBottom:"none", margin:"0 auto 0" }}/>
+                {/* Bag body */}
+                <div style={{
+                  width: fem?46:52, height: fem?44:50, borderRadius:8,
+                  backgroundColor: bagZ.item.dominantColor,
+                  backgroundImage:`linear-gradient(120deg,${shade(bagZ.item.dominantColor,-55)},${shade(bagZ.item.dominantColor,45)} 45%,${shade(bagZ.item.dominantColor,-40)})`,
+                  boxShadow:`0 3px 10px #00000040, inset -3px 0 8px ${shade(bagZ.item.dominantColor,-60)}44`,
+                  border:`1.5px solid ${shade(bagZ.item.dominantColor,-50)}`,
+                  position:"relative",
+                }}>
+                  <div style={{ position:"absolute", top:8, left:6, right:6, height:16, borderRadius:5, backgroundColor:shade(bagZ.item.dominantColor,-25), border:`1px solid ${shade(bagZ.item.dominantColor,-50)}` }}/>
+                  <div style={{ position:"absolute", top:4, left:6, width:14, height:6, borderRadius:4, backgroundColor:shade(bagZ.item.dominantColor,55), opacity:0.4 }}/>
+                  {/* Clasp */}
+                  <div style={{ position:"absolute", top:6, left:"50%", transform:"translateX(-50%)", width:10, height:10, borderRadius:"50%", backgroundColor:shade(bagZ.item.dominantColor,50), border:`1px solid ${shade(bagZ.item.dominantColor,-40)}` }}/>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ══════════════ BELT ══════════════ */}
+        {beltZ.item ? (
+          <ZoneButton {...beltZ} style={{
+            width: fem?84:106, height:14, borderRadius:4,
+            backgroundColor: beltZ.item.dominantColor,
+            backgroundImage:`linear-gradient(90deg,${shade(beltZ.item.dominantColor,-50)},${shade(beltZ.item.dominantColor,40)},${shade(beltZ.item.dominantColor,-50)})`,
+            boxShadow:`0 1px 4px #00000040`,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            position:"relative", zIndex:3, marginTop:-2,
+          }}>
+            {/* Buckle */}
+            <div style={{ width:18, height:12, borderRadius:3, backgroundColor:shade(beltZ.item.dominantColor,60), border:`1.5px solid ${shade(beltZ.item.dominantColor,-50)}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ width:10, height:6, border:`1px solid ${shade(beltZ.item.dominantColor,-40)}`, borderRadius:1 }}/>
+            </div>
+          </ZoneButton>
         ) : (
-          <g>
-            <ellipse cx="140" cy="64" rx="44" ry="36" fill={S.hair}/>
-            <rect x="96" y="38" width="88" height="28" rx="8" fill={S.hair}/>
-            <ellipse cx="96" cy="76" rx="10" ry="18" fill={S.hair} opacity="0.55"/>
-            <ellipse cx="184" cy="76" rx="10" ry="18" fill={S.hair} opacity="0.55"/>
-          </g>
+          <div style={{ height:6, marginTop:-2 }}/>
         )}
 
-        {/* ─────────── HEAD ─────────── */}
-        {fem
-          ? <ellipse cx="140" cy="78" rx="44" ry="50" fill="url(#rFace)" filter="url(#ds)"/>
-          : <ellipse cx="140" cy="74" rx="42" ry="46" fill="url(#rFace)" filter="url(#ds)"/>
-        }
+        {/* ══════════════ LEGS ══════════════ */}
+        <div className="flex justify-center gap-1.5" style={{ marginTop: 2 }}>
+          {[0,1].map(side => (
+            <ZoneButton key={side} {...legsZ}
+              style={{
+                ...clothStyle(legsColor),
+                width: fem ? 36 : 44,
+                height: fem ? 180 : 196,
+                borderRadius: fem
+                  ? "8px 8px 14px 14px"
+                  : "6px 6px 12px 12px",
+                position:"relative",
+              }}>
+              {/* Knee highlight */}
+              <div style={{ position:"absolute", top:"48%", left:"20%", width:"60%", height:16, borderRadius:"50%", backgroundColor:shade(legsColor,45), opacity:0.25 }}/>
+              {/* Thigh seam */}
+              <div style={{ position:"absolute", top:0, left:"50%", transform:"translateX(-50%)", width:1, height:"100%", backgroundColor:shade(legsColor,-45), opacity:0.2 }}/>
+            </ZoneButton>
+          ))}
+        </div>
 
-        {/* Ear lobes */}
-        <ellipse cx={fem?97:99} cy={fem?88:84} rx="6" ry="8" fill={S.base} stroke={S.lo} strokeWidth="0.6"/>
-        <ellipse cx={fem?183:181} cy={fem?88:84} rx="6" ry="8" fill={S.base} stroke={S.lo} strokeWidth="0.6"/>
+        {/* ══════════════ SHOES ══════════════ */}
+        <div className="flex justify-center" style={{ gap: fem?4:6, marginTop:2 }}>
+          {[0,1].map(side => (
+            <ZoneButton key={side} {...feetZ}
+              style={{
+                width: fem ? 36 : 46,
+                height: fem ? 22 : 20,
+                borderRadius: fem ? "6px 6px 14px 14px" : "4px 4px 10px 10px",
+                backgroundColor: feetColor,
+                backgroundImage:`linear-gradient(105deg,${shade(feetColor,-55)},${shade(feetColor,35)} 40%,${shade(feetColor,-40)})`,
+                boxShadow:`0 3px 8px #00000050, inset 0 -3px 6px ${shade(feetColor,-60)}55`,
+                position:"relative",
+              }}>
+              {/* Shoe shine */}
+              <div style={{ position:"absolute", top:3, left:4, width:"45%", height:6, borderRadius:"50%", backgroundColor:shade(feetColor,60), opacity:0.3 }}/>
+              {/* Sole */}
+              <div style={{ position:"absolute", bottom:0, left:0, right:0, height:5, borderRadius:"0 0 10px 10px", backgroundColor:shade(feetColor,-40) }}/>
+            </ZoneButton>
+          ))}
+        </div>
 
-        {/* ─────────── EYES / SUNGLASSES ─────────── */}
-        {(() => {
-          const z = zone("zone-eyes");
-          const ey = fem ? 76 : 72;
-          if (z.item) {
-            const c = z.item.dominantColor;
-            return (
-              <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":undefined}>
-                <rect x="108" y={ey-9} width="24" height="16" rx="7" fill={c} opacity="0.85" stroke={shade(c,-60)} strokeWidth={z.active?2.5:1.5}/>
-                <rect x="136" y={ey-9} width="24" height="16" rx="7" fill={c} opacity="0.85" stroke={shade(c,-60)} strokeWidth={z.active?2.5:1.5}/>
-                <line x1="132" y1={ey} x2="136" y2={ey} stroke={shade(c,-60)} strokeWidth="2"/>
-                <line x1="108" y1={ey} x2="102" y2={ey+1} stroke={shade(c,-60)} strokeWidth="2"/>
-                <line x1="160" y1={ey} x2="166" y2={ey+1} stroke={shade(c,-60)} strokeWidth="2"/>
-                <ellipse cx="116" cy={ey-2} rx="4" ry="2.5" fill="white" opacity="0.28"/>
-                <ellipse cx="144" cy={ey-2} rx="4" ry="2.5" fill="white" opacity="0.28"/>
-              </g>
-            );
-          }
-          return (
-            <g>
-              {/* Brows */}
-              <path d={fem?`M118 ${ey-11}Q130 ${ey-15}142 ${ey-11}`:`M116 ${ey-10}Q129 ${ey-14}142 ${ey-10}`} stroke={S.hair} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              <path d={fem?`M138 ${ey-11}Q150 ${ey-15}162 ${ey-11}`:`M138 ${ey-10}Q151 ${ey-14}164 ${ey-10}`} stroke={S.hair} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              {/* Whites */}
-              <ellipse cx="129" cy={ey} rx="9" ry={fem?7:6} fill="white"/>
-              <ellipse cx="151" cy={ey} rx="9" ry={fem?7:6} fill="white"/>
-              {/* Iris */}
-              <circle cx="129" cy={ey} r={fem?5.5:5} fill="#4B3220"/>
-              <circle cx="151" cy={ey} r={fem?5.5:5} fill="#4B3220"/>
-              {/* Pupil */}
-              <circle cx="129" cy={ey} r="2.8" fill="#1A0E05"/>
-              <circle cx="151" cy={ey} r="2.8" fill="#1A0E05"/>
-              {/* Catch light */}
-              <circle cx="127" cy={ey-2} r="1.8" fill="white"/>
-              <circle cx="149" cy={ey-2} r="1.8" fill="white"/>
-              {/* Lash line */}
-              <path d={`M120 ${ey-5}Q129 ${ey-9}138 ${ey-5}`} fill="none" stroke="#1A0E05" strokeWidth="1.2"/>
-              <path d={`M142 ${ey-5}Q151 ${ey-9}160 ${ey-5}`} fill="none" stroke="#1A0E05" strokeWidth="1.2"/>
-            </g>
-          );
-        })()}
-
-        {/* ─────────── NOSE ─────────── */}
-        <g opacity="0.55">
-          {fem
-            ? <><path d="M140 85 Q136 96 134 103 Q140 108 146 103 Q144 96 140 85" fill={S.lo} opacity="0.3"/><ellipse cx="135" cy="104" rx="4" ry="3" fill={S.lo} opacity="0.35"/><ellipse cx="145" cy="104" rx="4" ry="3" fill={S.lo} opacity="0.35"/></>
-            : <><path d="M140 82 Q136 94 133 102 Q140 108 147 102 Q144 94 140 82" fill={S.lo} opacity="0.3"/><ellipse cx="133" cy="103" rx="4.5" ry="3" fill={S.lo} opacity="0.38"/><ellipse cx="147" cy="103" rx="4.5" ry="3" fill={S.lo} opacity="0.38"/></>
-          }
-        </g>
-
-        {/* ─────────── LIPS ─────────── */}
-        {fem
-          ? <g><path d="M128 113 Q140 119 152 113 Q148 122 140 124 Q132 122 128 113Z" fill={S.lip}/><path d="M128 113 Q140 110 152 113" fill="none" stroke={shade(S.lip,-30)} strokeWidth="0.8"/><path d="M133 113 Q140 117 147 113" fill={shade(S.lip,25)} opacity="0.45"/></g>
-          : <g><path d="M130 108 Q140 114 150 108 Q148 116 140 118 Q132 116 130 108Z" fill={S.lip} opacity="0.85"/><path d="M130 108 Q140 106 150 108" fill="none" stroke={shade(S.lip,-30)} strokeWidth="0.7"/></g>
-        }
-
-        {/* Cheek blush (fem) */}
-        {fem && <><ellipse cx="110" cy="96" rx="12" ry="8" fill="#FF8888" opacity="0.14"/><ellipse cx="170" cy="96" rx="12" ry="8" fill="#FF8888" opacity="0.14"/></>}
-
-        {/* ─────────── NECK ─────────── */}
-        <rect x={fem?124:122} y={fem?125:118} width="32" height="32" rx="8" fill="url(#lNeck)"/>
-
-        {/* ─────────── NECK ACCESSORY ─────────── */}
-        {(() => {
-          const z = zone("zone-neck");
-          if (!z.item) return null;
-          const c = z.item.dominantColor;
-          const y0 = fem ? 131 : 124;
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":undefined}>
-              {z.item.category === Category.SCARF ? (
-                <>
-                  <path d={`M112 ${y0} Q140 ${y0+18} 168 ${y0} Q168 ${y0+20} 140 ${y0+26} Q112 ${y0+20} 112 ${y0}Z`}
-                    fill={c} stroke={shade(c,-50)} strokeWidth={z.active?2.5:1}/>
-                  <path d={`M132 ${y0+22} Q128 ${y0+50} 126 ${y0+76}`} stroke={c} strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.9"/>
-                </>
-              ) : (
-                <path d={`M118 ${y0+8} Q140 ${y0+22} 162 ${y0+8}`} fill="none" stroke={c} strokeWidth={z.active?5:3.5} strokeLinecap="round"/>
-              )}
-            </g>
-          );
-        })()}
-
-        {/* ─────────── TORSO ─────────── */}
-        {(() => {
-          const z = zone("zone-torso");
-          const c = z.item?.dominantColor;
-          const fill = z.fill ?? (fem?"#D4B8A0":"#B8A898");
-          const sk = c ? shade(c,-65) : "#7a6a60";
-
-          /* Feminine: smooth hourglass. Masculine: broad inverted-trapezoid */
-          const path = fem
-            ? "M100 152 Q72 166 66 202 L68 260 Q76 278 106 288 Q122 294 140 294 Q158 294 174 288 Q204 278 212 260 L214 202 Q208 166 180 152 Q162 142 140 142 Q118 142 100 152Z"
-            : "M88 148 Q58 164 50 200 L52 266 Q62 284 96 292 Q116 298 140 298 Q164 298 184 292 Q218 284 228 266 L230 200 Q222 164 192 148 Q168 138 140 138 Q112 138 88 148Z";
-
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}${z.item?`: ${z.item.name}`:" (empty)"}`}
-              filter={z.active?"url(#glow)":"url(#ds)"}>
-              <path d={path} fill={fill} stroke={sk} strokeWidth={z.active?3:1.5}/>
-              {/* Neckline */}
-              <path d={fem?"M118 148 Q140 164 162 148":"M116 144 Q140 158 164 144"} fill="none" stroke={sk} strokeWidth="1.5"/>
-              {/* Waist suggestion (fem) */}
-              {fem && <path d="M70 238 Q106 250 140 252 Q174 250 210 238" fill="none" stroke={sk} strokeWidth="0.8" opacity="0.4"/>}
-              {/* Center seam */}
-              {c && <path d={fem?"M140 148 L140 292":"M140 144 L140 296"} stroke={shade(c,-45)} strokeWidth="0.7" opacity="0.25" fill="none"/>}
-            </g>
-          );
-        })()}
-
-        {/* ─────────── ARMS ─────────── */}
-        {(() => {
-          const torso = getItem("zone-torso", items);
-          const af = torso ? `url(#${gid(torso.id)})` : "url(#lArm)";
-          const as_ = torso ? shade(torso.dominantColor,-65) : S.lo;
-
-          if (fem) return (
-            <>
-              {/* Left upper arm */}
-              <path d="M66 168 Q42 184 38 232 Q38 256 48 268 Q58 274 66 268 Q76 256 76 232 L78 172Z"
-                fill={af} stroke={as_} strokeWidth="1.2" filter="url(#ds)"/>
-              {/* Left forearm */}
-              <path d="M48 268 Q38 288 40 314 Q44 330 56 332 Q68 332 70 318 Q72 300 66 268Z"
-                fill="url(#lArm)" stroke={S.lo} strokeWidth="1"/>
-              {/* Left hand */}
-              <ellipse cx="54" cy="340" rx="13" ry="16" fill="url(#rFace)" stroke={S.lo} strokeWidth="0.8"/>
-
-              {/* Right upper arm */}
-              <path d="M214 168 Q238 184 242 232 Q242 256 232 268 Q222 274 214 268 Q204 256 202 232 L200 172Z"
-                fill={af} stroke={as_} strokeWidth="1.2" filter="url(#ds)"/>
-              {/* Right forearm */}
-              <path d="M232 268 Q242 288 240 314 Q236 330 224 332 Q212 332 210 318 Q208 300 214 268Z"
-                fill="url(#lArm)" stroke={S.lo} strokeWidth="1"/>
-              {/* Right hand */}
-              <ellipse cx="226" cy="340" rx="13" ry="16" fill="url(#rFace)" stroke={S.lo} strokeWidth="0.8"/>
-            </>
-          );
-
-          return (
-            <>
-              {/* Left upper arm */}
-              <path d="M50 168 Q24 186 20 238 Q20 264 32 278 Q44 284 52 278 Q64 264 64 238 L68 172Z"
-                fill={af} stroke={as_} strokeWidth="1.2" filter="url(#ds)"/>
-              {/* Left forearm */}
-              <path d="M32 278 Q20 300 22 328 Q26 346 40 348 Q54 348 56 332 Q58 312 52 278Z"
-                fill="url(#lArm)" stroke={S.lo} strokeWidth="1"/>
-              <ellipse cx="38" cy="356" rx="15" ry="18" fill="url(#rFace)" stroke={S.lo} strokeWidth="0.8"/>
-
-              {/* Right upper arm */}
-              <path d="M230 168 Q256 186 260 238 Q260 264 248 278 Q236 284 228 278 Q216 264 216 238 L212 172Z"
-                fill={af} stroke={as_} strokeWidth="1.2" filter="url(#ds)"/>
-              {/* Right forearm */}
-              <path d="M248 278 Q260 300 258 328 Q254 346 240 348 Q226 348 224 332 Q222 312 228 278Z"
-                fill="url(#lArm)" stroke={S.lo} strokeWidth="1"/>
-              <ellipse cx="242" cy="356" rx="15" ry="18" fill="url(#rFace)" stroke={S.lo} strokeWidth="0.8"/>
-            </>
-          );
-        })()}
-
-        {/* ─────────── BELT ─────────── */}
-        {(() => {
-          const z = zone("zone-waist");
-          if (!z.item) return null;
-          const c = z.item.dominantColor;
-          const y = fem ? 284 : 290;
-          const x = fem ? 72 : 58;
-          const w = fem ? 136 : 164;
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":undefined}>
-              <rect x={x} y={y} width={w} height="18" rx="5" fill={c} stroke={shade(c,-55)} strokeWidth={z.active?3:1.5}/>
-              {/* Buckle */}
-              <rect x="130" y={y+1} width="20" height="16" rx="4" fill={shade(c,50)} stroke={shade(c,-45)} strokeWidth="1.2"/>
-              <rect x="133" y={y+4} width="14" height="10" rx="2" fill="none" stroke={shade(c,-45)} strokeWidth="1"/>
-              <line x1="140" y1={y+1} x2="140" y2={y+17} stroke={shade(c,-45)} strokeWidth="1"/>
-            </g>
-          );
-        })()}
-
-        {/* ─────────── LEGS ─────────── */}
-        {(() => {
-          const z = zone("zone-legs");
-          const legsItem = z.item;
-          const fill = legsItem ? `url(#${gid(legsItem.id)}v)` : "#787888";
-          const sk = legsItem ? shade(legsItem.dominantColor,-60) : "#505060";
-          const baseY = fem ? 298 : 304;
-
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}${legsItem?`: ${legsItem.name}`:" (empty)"}`}
-              filter={z.active?"url(#glow)":"url(#ds)"}>
-              {fem ? (
-                <>
-                  <path d={`M72 ${baseY} Q64 356 62 424 L66 536 L120 536 L130 454 L140 ${baseY+4}Z`}
-                    fill={fill} stroke={sk} strokeWidth={z.active?3:1.5}/>
-                  <path d={`M208 ${baseY} Q216 356 218 424 L214 536 L160 536 L150 454 L140 ${baseY+4}Z`}
-                    fill={fill} stroke={sk} strokeWidth={z.active?3:1.5}/>
-                  {/* Crotch */}
-                  {legsItem && <path d={`M94 ${baseY+6} Q140 ${baseY+28} 186 ${baseY+6}`} fill="none" stroke={shade(legsItem.dominantColor,-55)} strokeWidth="1.5" opacity="0.5"/>}
-                </>
-              ) : (
-                <>
-                  <path d={`M58 ${baseY} Q48 360 46 428 L50 536 L108 536 L120 458 L136 ${baseY+6}Z`}
-                    fill={fill} stroke={sk} strokeWidth={z.active?3:1.5}/>
-                  <path d={`M222 ${baseY} Q232 360 234 428 L230 536 L172 536 L160 458 L144 ${baseY+6}Z`}
-                    fill={fill} stroke={sk} strokeWidth={z.active?3:1.5}/>
-                  {legsItem && <path d={`M82 ${baseY+6} Q140 ${baseY+32} 198 ${baseY+6}`} fill="none" stroke={shade(legsItem.dominantColor,-55)} strokeWidth="1.5" opacity="0.5"/>}
-                </>
-              )}
-              {/* Knee highlights */}
-              {legsItem && (
-                <>
-                  <ellipse cx={fem?82:68} cy="432" rx="12" ry="9" fill={shade(legsItem.dominantColor,40)} opacity="0.22"/>
-                  <ellipse cx={fem?198:212} cy="432" rx="12" ry="9" fill={shade(legsItem.dominantColor,40)} opacity="0.22"/>
-                </>
-              )}
-            </g>
-          );
-        })()}
-
-        {/* ─────────── SHOES ─────────── */}
-        {(() => {
-          const z = zone("zone-feet");
-          const fill = z.fill ?? "#2a2a3a";
-          const sk = z.item ? shade(z.item.dominantColor,-65) : "#111";
-          const sw = z.active ? 3 : 1.5;
-
-          if (fem) return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}${z.item?`: ${z.item.name}`:" (empty)"}`}
-              filter={z.active?"url(#glow)":"url(#ds)"}>
-              {/* Left pump-style */}
-              <path d="M62 536 Q52 552 50 570 Q52 586 72 588 Q94 588 96 572 L96 536Z"
-                fill={fill} stroke={sk} strokeWidth={sw}/>
-              <path d="M48 586 Q52 592 74 594 Q96 594 98 586" fill="none" stroke={sk} strokeWidth="2.5"/>
-              {z.item && <ellipse cx="72" cy="546" rx="10" ry="5" fill={shade(z.item.dominantColor,60)} opacity="0.3"/>}
-              {/* Right pump-style */}
-              <path d="M218 536 Q228 552 230 570 Q228 586 208 588 Q186 588 184 572 L184 536Z"
-                fill={fill} stroke={sk} strokeWidth={sw}/>
-              <path d="M232 586 Q228 592 206 594 Q184 594 182 586" fill="none" stroke={sk} strokeWidth="2.5"/>
-              {z.item && <ellipse cx="208" cy="546" rx="10" ry="5" fill={shade(z.item.dominantColor,60)} opacity="0.3"/>}
-            </g>
-          );
-
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}${z.item?`: ${z.item.name}`:" (empty)"}`}
-              filter={z.active?"url(#glow)":"url(#ds)"}>
-              {/* Left sneaker */}
-              <path d="M46 536 Q34 552 32 572 Q34 588 60 590 Q84 590 86 572 L86 536Z"
-                fill={fill} stroke={sk} strokeWidth={sw}/>
-              <path d="M30 588 Q34 596 62 596 Q88 596 88 588" fill="none" stroke={sk} strokeWidth="3"/>
-              {z.item && <ellipse cx="58" cy="548" rx="13" ry="6" fill={shade(z.item.dominantColor,60)} opacity="0.28"/>}
-              {/* Right sneaker */}
-              <path d="M234 536 Q246 552 248 572 Q246 588 220 590 Q196 590 194 572 L194 536Z"
-                fill={fill} stroke={sk} strokeWidth={sw}/>
-              <path d="M250 588 Q246 596 218 596 Q192 596 192 588" fill="none" stroke={sk} strokeWidth="3"/>
-              {z.item && <ellipse cx="222" cy="548" rx="13" ry="6" fill={shade(z.item.dominantColor,60)} opacity="0.28"/>}
-            </g>
-          );
-        })()}
-
-        {/* ─────────── WRIST / WATCH ─────────── */}
-        {(() => {
-          const z = zone("zone-wrist");
-          if (!z.item) return null;
-          const c = z.item.dominantColor;
-          const x = fem ? 26 : 14;
-          const y = fem ? 316 : 326;
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":undefined}>
-              <rect x={x} y={y} width="26" height="18" rx="6" fill={c} stroke={shade(c,-55)} strokeWidth={z.active?2.5:1.2}/>
-              <rect x={x+5} y={y+3} width="16" height="12" rx="3.5" fill={shade(c,55)} stroke={shade(c,-40)} strokeWidth="0.8"/>
-              {/* Clock hands */}
-              <line x1={x+13} y1={y+9} x2={x+13} y2={y+5} stroke={shade(c,-65)} strokeWidth="1.2"/>
-              <line x1={x+13} y1={y+9} x2={x+17} y2={y+9} stroke={shade(c,-65)} strokeWidth="1.2"/>
-            </g>
-          );
-        })()}
-
-        {/* ─────────── BAG ─────────── */}
-        {(() => {
-          const z = zone("zone-hand");
-          if (!z.item) return null;
-          const c = z.item.dominantColor;
-          const bx = fem ? 220 : 228;
-          const by = fem ? 342 : 360;
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":"url(#ds)"}>
-              {/* Handle */}
-              <path d={`M${bx+8} ${by} Q${bx+12} ${by-22} ${bx+28} ${by-22} Q${bx+44} ${by-22} ${bx+48} ${by}`}
-                fill="none" stroke={shade(c,-50)} strokeWidth="3.5" strokeLinecap="round"/>
-              {/* Body */}
-              <rect x={bx} y={by} width="58" height="48" rx="10" fill={c} stroke={shade(c,-55)} strokeWidth={z.active?3:1.5}/>
-              {/* Front pocket */}
-              <rect x={bx+7} y={by+18} width="44" height="22" rx="6" fill={shade(c,-25)} stroke={shade(c,-55)} strokeWidth="1"/>
-              {/* Clasp */}
-              <circle cx={bx+29} cy={by+12} r="5" fill={shade(c,55)} stroke={shade(c,-45)} strokeWidth="1.2"/>
-              <circle cx={bx+29} cy={by+12} r="2.5" fill="none" stroke={shade(c,-45)} strokeWidth="0.8"/>
-              {/* Top shine */}
-              <rect x={bx+5} y={by+3} width="18" height="7" rx="3.5" fill={shade(c,55)} opacity="0.38"/>
-            </g>
-          );
-        })()}
-
-        {/* ─────────── HAT ─────────── */}
-        {(() => {
-          const z = zone("zone-head");
-          if (!z.item) return null;
-          const c = z.item.dominantColor;
-          const top = fem ? 30 : 26;
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":"url(#ds)"}>
-              {/* Brim */}
-              <ellipse cx="140" cy={top+28} rx="62" ry="13" fill={shade(c,-50)} stroke={shade(c,-60)} strokeWidth="1"/>
+        {/* ══════════════ HAT (absolute over head) ══════════════ */}
+        {hatZ.item && (
+          <div style={{ position:"absolute", top: fem?-16:-14, left:"50%", transform:"translateX(-50%)", zIndex:10, width: fem?120:110 }}>
+            <ZoneButton {...hatZ} style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
               {/* Crown */}
-              <path d={`M92 ${top+28} Q88 ${top+4} 140 ${top-10} Q192 ${top+4} 188 ${top+28}Z`}
-                fill={c} stroke={shade(c,-55)} strokeWidth={z.active?3:1.5}/>
-              {/* Highlight */}
-              <path d={`M112 ${top+20} Q140 ${top+8} 168 ${top+20}`} fill="none" stroke={shade(c,60)} strokeWidth="2.5" opacity="0.5" strokeLinecap="round"/>
-              {/* Band */}
-              <rect x="94" y={top+24} width="92" height="7" rx="2" fill={shade(c,-35)} stroke={shade(c,-55)} strokeWidth="0.6"/>
-            </g>
-          );
-        })()}
+              <div style={{
+                width: fem?78:72, height:38,
+                borderRadius:"50% 50% 0 0 / 100% 100% 0 0",
+                backgroundColor: hatZ.item.dominantColor,
+                backgroundImage:`linear-gradient(105deg,${shade(hatZ.item.dominantColor,-55)},${shade(hatZ.item.dominantColor,50)} 42%,${shade(hatZ.item.dominantColor,-40)})`,
+                boxShadow:`0 -2px 8px #00000030`,
+                position:"relative",
+              }}>
+                <div style={{ position:"absolute", bottom:6, left:"20%", width:"60%", height:5, borderRadius:4, backgroundColor:shade(hatZ.item.dominantColor,-35), opacity:0.6 }}/>
+              </div>
+              {/* Brim */}
+              <div style={{
+                width: fem?116:106, height:12, marginTop:-2,
+                borderRadius:8,
+                backgroundColor: shade(hatZ.item.dominantColor,-30),
+                backgroundImage:`linear-gradient(90deg,${shade(hatZ.item.dominantColor,-60)},${shade(hatZ.item.dominantColor,20)} 50%,${shade(hatZ.item.dominantColor,-60)})`,
+                boxShadow:`0 3px 6px #00000040`,
+              }}/>
+            </ZoneButton>
+          </div>
+        )}
 
-        {/* ─────────── EARRINGS ─────────── */}
-        {(() => {
-          const z = zone("zone-ears");
-          if (!z.item || z.item.category !== Category.JEWELRY) return null;
-          const c = z.item.dominantColor;
-          const ey = fem ? 95 : 91;
-          return (
-            <g onClick={z.onClick} style={{cursor:"pointer"}} role="button" aria-label={`${z.label}: ${z.item.name}`} filter={z.active?"url(#glow)":undefined}>
-              <circle cx={fem?97:99} cy={ey} r="7" fill={c} stroke={shade(c,-50)} strokeWidth={z.active?2.5:1.2}/>
-              <circle cx={fem?96:98} cy={ey-2} r="2.5" fill="white" opacity="0.38"/>
-              {fem && <>
-                <line x1="97" y1={ey+7} x2="97" y2={ey+20} stroke={c} strokeWidth="2.5"/>
-                <circle cx="97" cy={ey+25} r="5" fill={c} stroke={shade(c,-50)} strokeWidth="1"/>
-                <circle cx="96" cy={ey+23} r="2" fill="white" opacity="0.35"/>
-              </>}
-              <circle cx={fem?183:181} cy={ey} r="7" fill={c} stroke={shade(c,-50)} strokeWidth={z.active?2.5:1.2}/>
-              <circle cx={fem?182:180} cy={ey-2} r="2.5" fill="white" opacity="0.38"/>
-              {fem && <>
-                <line x1="183" y1={ey+7} x2="183" y2={ey+20} stroke={c} strokeWidth="2.5"/>
-                <circle cx="183" cy={ey+25} r="5" fill={c} stroke={shade(c,-50)} strokeWidth="1"/>
-                <circle cx="182" cy={ey+23} r="2" fill="white" opacity="0.35"/>
-              </>}
-            </g>
-          );
-        })()}
+      </div>
 
-      </svg>
-
-      {/* Item legend */}
-      <div className="mt-2 flex flex-wrap gap-1.5 justify-center max-w-[220px]">
+      {/* ── Item legend ── */}
+      <div className="mt-4 flex flex-wrap gap-1.5 justify-center max-w-[220px]">
         {outfit.items.map(item => (
           <div key={item.id} className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{backgroundColor: item.dominantColor}}/>
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.dominantColor }}/>
             <span>{item.subcategory || item.category}</span>
           </div>
         ))}
