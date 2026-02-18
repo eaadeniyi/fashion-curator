@@ -84,19 +84,24 @@ export function colorMatchScore(
   itemHex: string,
   palette: ColorPalette
 ): number {
-  const itemColor = colord(itemHex);
+  const itemHsl = colord(itemHex).toHsl();
   let bestScore = 0;
 
-  for (const swatch of palette.swatches) {
-    const delta = itemColor.delta(colord(swatch.hex));
-    const score = Math.max(0, 100 - delta * 200);
-    bestScore = Math.max(bestScore, score);
-  }
+  // Neutral items (near-white, near-black, very desaturated) always pass —
+  // they pair with any palette and are wardrobe staples.
+  const isNeutral = itemHsl.s < 15 || itemHsl.l > 88 || itemHsl.l < 12;
+  if (isNeutral) return 70;
 
-  // Also check against neutrals (neutrals always somewhat match)
-  for (const neutral of palette.neutrals) {
-    const delta = itemColor.delta(colord(neutral));
-    const score = Math.max(0, 80 - delta * 150);
+  for (const swatch of palette.swatches) {
+    const swatchHsl = colord(swatch.hex).toHsl();
+    // Circular hue distance (0–180°)
+    const hueDist = Math.min(
+      Math.abs(itemHsl.h - swatchHsl.h),
+      360 - Math.abs(itemHsl.h - swatchHsl.h)
+    );
+    // Score: 100 at 0° difference, 0 at ≥60° — matches the tolerance of
+    // color harmony (analogous = ±30°, complement = 180° but scored separately)
+    const score = Math.max(0, 100 - (hueDist / 60) * 100);
     bestScore = Math.max(bestScore, score);
   }
 

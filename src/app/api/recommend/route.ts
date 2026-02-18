@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       maxPrice: preferences.budgetRange.max,
       minimal: preferences.preferMinimal || undefined,
       palette,
-      minColorScore: 15, // low threshold to keep enough items
+      minColorScore: 40, // items must be within ~24° of a palette hue, or be a neutral
     });
 
     // If too few items after strict filtering, relax filters

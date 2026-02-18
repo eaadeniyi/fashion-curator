@@ -131,7 +131,13 @@ export default function CuratePage() {
 
       <div className="space-y-8">
         {outfits.map((outfit, i) => (
-          <OutfitCard key={outfit.id} outfit={outfit} index={i} />
+          <OutfitCard
+            key={outfit.id}
+            outfit={outfit}
+            index={i}
+            gender={genderExpression!}
+            maxBudget={budgetRange.max}
+          />
         ))}
       </div>
 

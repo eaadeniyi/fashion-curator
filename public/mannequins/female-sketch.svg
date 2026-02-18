@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 520" fill="none">
+  <!-- Stroke style for the whole figure -->
+  <style>
+    .figure-line { stroke: #2a2a2a; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .zone { fill: transparent; cursor: pointer; transition: fill 0.2s; }
+    .zone:hover { fill-opacity: 0.15 !important; filter: brightness(1.05); }
+  </style>
+
+  <!-- === ZONES (clickable, filled by JS/React via inline style) === -->
+
+  <!-- zone-head (hat) -->
+  <ellipse id="zone-head" data-zone="zone-head" class="zone" cx="110" cy="38" rx="28" ry="32" />
+
+  <!-- zone-eyes (sunglasses) -->
+  <rect id="zone-eyes" data-zone="zone-eyes" class="zone" x="88" y="44" width="44" height="12" rx="6" />
+
+  <!-- zone-ears-left (earrings) -->
+  <circle id="zone-ears" data-zone="zone-ears" class="zone" cx="82" cy="60" r="8" />
+
+  <!-- zone-neck (scarf / necklace) -->
+  <rect id="zone-neck" data-zone="zone-neck" class="zone" x="96" y="72" width="28" height="20" rx="4" />
+
+  <!-- zone-torso (top / dress / outerwear) -->
+  <path id="zone-torso" data-zone="zone-torso" class="zone"
+    d="M76 94 Q60 100 58 140 L64 200 Q80 210 110 212 Q140 210 156 200 L162 140 Q160 100 144 94 Q130 88 110 88 Q90 88 76 94Z" />
+
+  <!-- zone-waist (belt) -->
+  <rect id="zone-waist" data-zone="zone-waist" class="zone" x="68" y="202" width="84" height="16" rx="4" />
+
+  <!-- zone-wrist-left (watch / bracelet) -->
+  <rect id="zone-wrist" data-zone="zone-wrist" class="zone" x="46" y="196" width="16" height="12" rx="3" />
+
+  <!-- zone-hand-left (bag - arm area) -->
+  <path id="zone-hand" data-zone="zone-hand" class="zone"
+    d="M36 200 Q28 220 32 250 Q40 260 52 252 L56 220 Z" />
+
+  <!-- zone-legs (bottom / skirt / trousers) -->
+  <path id="zone-legs" data-zone="zone-legs" class="zone"
+    d="M68 218 Q64 260 62 320 L80 380 L100 380 L110 330 L120 380 L140 380 L158 320 Q156 260 152 218 Z" />
+
+  <!-- zone-feet (shoes / socks) -->
+  <path id="zone-feet" data-zone="zone-feet" class="zone"
+    d="M62 382 Q58 410 60 430 Q70 442 88 438 Q96 432 100 422 L100 382 Z
+       M120 382 L120 422 Q124 432 132 438 Q150 442 160 430 Q162 410 158 382 Z" />
+
+  <!-- === LINE ART (drawn on top of zones) === -->
+
+  <!-- Head outline -->
+  <ellipse class="figure-line" cx="110" cy="38" rx="26" ry="30" />
+
+  <!-- Neck -->
+  <line class="figure-line" x1="100" y1="66" x2="98" y2="82" />
+  <line class="figure-line" x1="120" y1="66" x2="122" y2="82" />
+
+  <!-- Ears -->
+  <ellipse class="figure-line" cx="84" cy="38" rx="4" ry="6" />
+  <ellipse class="figure-line" cx="136" cy="38" rx="4" ry="6" />
+
+  <!-- Hair (simple wavy lines suggesting long hair) -->
+  <path class="figure-line" fill="none" d="M84 14 Q70 30 72 60 Q74 80 76 94" />
+  <path class="figure-line" fill="none" d="M136 14 Q150 30 148 60 Q146 80 144 94" />
+  <path class="figure-line" fill="none" d="M110 8 Q108 4 110 2 Q112 4 110 8" />
+
+  <!-- Face features -->
+  <!-- Eyes -->
+  <ellipse class="figure-line" cx="100" cy="36" rx="5" ry="3.5" />
+  <ellipse class="figure-line" cx="120" cy="36" rx="5" ry="3.5" />
+  <!-- Pupils -->
+  <circle fill="#2a2a2a" cx="100" cy="36" r="1.5" />
+  <circle fill="#2a2a2a" cx="120" cy="36" r="1.5" />
+  <!-- Eyebrows -->
+  <path class="figure-line" d="M94 30 Q100 27 106 30" />
+  <path class="figure-line" d="M114 30 Q120 27 126 30" />
+  <!-- Nose -->
+  <path class="figure-line" fill="none" d="M108 40 Q107 46 110 48 Q113 46 112 40" />
+  <!-- Lips -->
+  <path class="figure-line" fill="none" d="M104 54 Q110 58 116 54" />
+  <path class="figure-line" fill="none" d="M104 54 Q110 51 116 54" />
+
+  <!-- Shoulders -->
+  <path class="figure-line" fill="none" d="M98 82 Q76 86 60 100 Q56 110 58 130" />
+  <path class="figure-line" fill="none" d="M122 82 Q144 86 160 100 Q164 110 162 130" />
+
+  <!-- Torso sides -->
+  <path class="figure-line" fill="none" d="M58 130 Q55 160 60 200 Q80 214 110 216 Q140 214 160 200 Q165 160 162 130" />
+
+  <!-- Waist indication -->
+  <path class="figure-line" fill="none" d="M66 168 Q110 176 154 168" />
+
+  <!-- Arms -->
+  <!-- Left arm -->
+  <path class="figure-line" fill="none" d="M60 104 Q44 130 42 170 Q40 190 46 210 Q52 220 56 218" />
+  <!-- Left hand -->
+  <ellipse class="figure-line" cx="46" cy="218" rx="8" ry="6" />
+  <!-- Right arm -->
+  <path class="figure-line" fill="none" d="M160 104 Q176 130 178 170 Q180 190 174 210 Q168 220 164 218" />
+  <!-- Right hand + bag suggestion -->
+  <path class="figure-line" fill="none" d="M172 218 Q180 230 178 252 Q172 264 164 256 Q156 248 160 230 L164 218" />
+  <path class="figure-line" fill="none" d="M162 232 Q174 232 174 244 Q174 254 162 254 Q150 254 150 244 Q150 232 162 232" />
+
+  <!-- Necklace line -->
+  <path class="figure-line" fill="none" d="M98 84 Q110 92 122 84" />
+
+  <!-- Hips -->
+  <path class="figure-line" fill="none" d="M64 200 Q62 210 66 220 L68 222 Q86 228 110 228 Q134 228 152 222 L154 220 Q158 210 156 200" />
+
+  <!-- Legs -->
+  <!-- Left leg -->
+  <path class="figure-line" fill="none" d="M68 224 Q64 260 62 300 Q60 340 62 380" />
+  <path class="figure-line" fill="none" d="M100 224 Q102 260 104 300 Q106 340 104 380" />
+  <!-- Right leg -->
+  <path class="figure-line" fill="none" d="M120 224 Q118 260 116 300 Q114 340 116 380" />
+  <path class="figure-line" fill="none" d="M152 224 Q156 260 158 300 Q160 340 158 380" />
+
+  <!-- Knee suggestions -->
+  <ellipse class="figure-line" cx="82" cy="310" rx="10" ry="6" />
+  <ellipse class="figure-line" cx="138" cy="310" rx="10" ry="6" />
+
+  <!-- Feet / shoes -->
+  <!-- Left foot -->
+  <path class="figure-line" fill="none" d="M62 382 Q58 400 60 420 Q62 432 76 436 Q90 436 98 426 Q104 416 100 382" />
+  <!-- Right foot -->
+  <path class="figure-line" fill="none" d="M158 382 Q162 400 160 420 Q158 432 144 436 Q130 436 122 426 Q116 416 120 382" />
+
+  <!-- Heel suggestions -->
+  <line class="figure-line" x1="60" y1="420" x2="64" y2="440" />
+  <line class="figure-line" x1="160" y1="420" x2="156" y2="440" />
+  <line class="figure-line" x1="60" y1="440" x2="100" y2="440" />
+  <line class="figure-line" x1="120" y1="440" x2="160" y2="440" />
+
+  <!-- Belt line -->
+  <path class="figure-line" fill="none" d="M68 202 Q110 208 152 202" />
+  <rect class="figure-line" x="104" y="200" width="12" height="10" rx="2" fill="none" />
+</svg>
